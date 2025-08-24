@@ -12,10 +12,10 @@ jobs:
     - name: Deploy to CVM
       uses: appleboy/ssh-action@v1.0.0
       with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
+        host: ${{ vars.HOST }}
+        username: ${{ vars.USERNAME }}
         key: ${{ secrets.SSH_KEY }}
-        port: ${{ secrets.PORT }}
+        port: ${{ vars.PORT }}
         script: |
           cd /data/sync_web 
           git pull origin main
