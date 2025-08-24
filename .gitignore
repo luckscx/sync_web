@@ -64,3 +64,4 @@ coverage.xml
 
 
 sync_data.json
+*.pid
