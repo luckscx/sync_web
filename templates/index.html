@@ -158,18 +158,19 @@
         .button-group {
             display: flex;
             gap: 10px;
-            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
         }
 
         .secondary-btn {
             background: #6c757d;
             color: white;
             border: none;
-            padding: 12px 25px;
+            padding: 12px 20px;
             border-radius: 8px;
             font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s;
         }
 
         .secondary-btn:hover {
@@ -353,13 +354,17 @@
                 <textarea id="textInput" class="text-input" placeholder="请输入要同步的文本内容..."></textarea>
                 <div class="button-group">
                     <button id="readClipboardBtn" class="secondary-btn">📋 读取剪贴板</button>
+                    <button id="clearTextBtn" class="secondary-btn">🗑️ 清空文本</button>
                     <button id="syncTextBtn" class="submit-btn">同步文本</button>
                 </div>
             </div>
 
             <div class="function-card">
                 <h3>📋 历史记录</h3>
-                <button id="refreshHistoryBtn" class="submit-btn">刷新历史</button>
+                <div class="button-group">
+                    <button id="refreshHistoryBtn" class="submit-btn">刷新历史</button>
+                    <button id="clearHistoryBtn" class="secondary-btn">🗑️ 清空历史</button>
+                </div>
                 <div id="historyContainer"></div>
             </div>
 
@@ -389,7 +394,9 @@
         const syncTextBtn = document.getElementById('syncTextBtn');
         const uploadFileBtn = document.getElementById('uploadFileBtn');
         const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn'); // Added clearHistoryBtn
         const readClipboardBtn = document.getElementById('readClipboardBtn');
+        const clearTextBtn = document.getElementById('clearTextBtn');
 
         // 输入元素
         const textInput = document.getElementById('textInput');
@@ -411,7 +418,9 @@
             syncTextBtn.addEventListener('click', handleSyncText);
             uploadFileBtn.addEventListener('click', handleUploadFile);
             refreshHistoryBtn.addEventListener('click', loadHistory);
+            clearHistoryBtn.addEventListener('click', clearHistory); // Added clearHistoryBtn
             readClipboardBtn.addEventListener('click', readClipboardContent);
+            clearTextBtn.addEventListener('click', clearText);
             
             // 回车登录
             passwordInput.addEventListener('keypress', function(e) {
@@ -569,6 +578,29 @@
             }
         }
 
+        // 清空历史记录
+        async function clearHistory() {
+            if (confirm('确定要清空所有历史记录吗？此操作不可逆。')) {
+                showLoading(true);
+                try {
+                    const response = await fetch('/api/clear-history', {
+                        method: 'POST'
+                    });
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        showMessage('历史记录已清空！', 'success');
+                        loadHistory(); // Reload history to show empty state
+                    } else {
+                        showMessage(data.message || '清空失败', 'error');
+                    }
+                } catch (error) {
+                    showMessage('网络错误，请重试', 'error');
+                } finally {
+                    showLoading(false);
+                }
+            }
+        }
+
         // 解析UserAgent获取设备信息
         function parseUserAgent(userAgent) {
             if (!userAgent) return { icon: '🌐', name: '未知设备' };
@@ -680,6 +712,12 @@
         // 下载文件
         function downloadFile(fileId) {
             window.open(`/api/download/${fileId}`, '_blank');
+        }
+
+        // 清空文本输入框
+        function clearText() {
+            textInput.value = '';
+            showMessage('文本已清空', 'success');
         }
 
         // 静默读取剪贴板内容（页面加载时自动执行）

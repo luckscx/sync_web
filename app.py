@@ -209,6 +209,28 @@ def download_file(file_id):
     
     return send_file(file_path, as_attachment=True, download_name=file_item['original_name'])
 
+@app.route('/api/clear-history', methods=['POST', 'DELETE'])
+def clear_history():
+    """清空所有历史记录"""
+    auth_cookie = request.cookies.get('sync_auth')
+    if auth_cookie != 'authenticated':
+        return jsonify({'success': False, 'message': '未认证'}), 401
+    
+    try:
+        # 清空数据
+        sync_data = {'texts': [], 'files': []}
+        save_data(sync_data)
+        
+        # 清空上传的文件
+        for filename in os.listdir(app.config['UPLOAD_FOLDER']):
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+        
+        return jsonify({'success': True, 'message': '历史记录已清空'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'清空失败: {str(e)}'}), 500
+
 @app.route('/api/logout')
 def logout():
     """登出"""
