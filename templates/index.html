@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sync - 多端数据同步</title>
+    <title>Grissom Sync</title>
     <style>
         * {
             margin: 0;
@@ -325,8 +325,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Sync</h1>
-            <p>多端数据同步平台</p>
+            <h1>Grissom Sync</h1>
         </div>
 
         <!-- 登录界面 -->
@@ -349,14 +348,6 @@
                 <div>处理中...</div>
             </div>
 
-            <!-- 功能3: 历史记录 -->
-            <div class="function-card">
-                <h3>📋 历史记录</h3>
-                <button id="refreshHistoryBtn" class="submit-btn">刷新历史</button>
-                <div id="historyContainer"></div>
-            </div>
-
-            <!-- 功能1: 文本同步 -->
             <div class="function-card">
                 <h3>📝 文本同步</h3>
                 <textarea id="textInput" class="text-input" placeholder="请输入要同步的文本内容..."></textarea>
@@ -366,7 +357,12 @@
                 </div>
             </div>
 
-            <!-- 功能2: 文件上传 -->
+            <div class="function-card">
+                <h3>📋 历史记录</h3>
+                <button id="refreshHistoryBtn" class="submit-btn">刷新历史</button>
+                <div id="historyContainer"></div>
+            </div>
+
             <div class="function-card">
                 <h3>📁 文件上传</h3>
                 <input type="file" id="fileInput" class="file-input" />
