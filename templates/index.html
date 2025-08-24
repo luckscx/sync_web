@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync - 多端数据同步</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-container h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .password-input {
+            width: 100%;
+            max-width: 300px;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .main-content {
+            display: none;
+        }
+
+        .main-content.show {
+            display: block;
+        }
+
+        .function-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .function-card h3 {
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .function-card h3::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+        }
+
+        .file-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .secondary-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .secondary-btn:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .history-item-type {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .history-item-time {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .history-item-content {
+            margin-bottom: 15px;
+            word-break: break-all;
+        }
+
+        .history-item-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .action-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .device-info {
+            display: inline-block;
+            margin-left: 8px;
+            font-size: 12px;
+            cursor: help;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+            background: rgba(102, 126, 234, 0.1);
+            padding: 2px 6px;
+            border-radius: 12px;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .device-info:hover {
+            opacity: 1;
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .function-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Sync</h1>
+            <p>多端数据同步平台</p>
+        </div>
+
+        <!-- 登录界面 -->
+        <div id="loginContainer" class="login-container">
+            <h2>请输入密码登录</h2>
+            <input type="password" id="passwordInput" class="password-input" placeholder="请输入密码" />
+            <button id="loginBtn" class="login-btn">登录</button>
+        </div>
+
+        <!-- 主功能界面 -->
+        <div id="mainContent" class="main-content">
+            <button id="logoutBtn" class="logout-btn">登出</button>
+            
+            <!-- 消息提示 -->
+            <div id="message" class="message"></div>
+            
+            <!-- 加载提示 -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <div>处理中...</div>
+            </div>
+
+            <!-- 功能1: 文本同步 -->
+            <div class="function-card">
+                <h3>📝 文本同步</h3>
+                <textarea id="textInput" class="text-input" placeholder="请输入要同步的文本内容..."></textarea>
+                <div class="button-group">
+                    <button id="readClipboardBtn" class="secondary-btn">📋 读取剪贴板</button>
+                    <button id="syncTextBtn" class="submit-btn">同步文本</button>
+                </div>
+            </div>
+
+            <!-- 功能2: 文件上传 -->
+            <div class="function-card">
+                <h3>📁 文件上传</h3>
+                <input type="file" id="fileInput" class="file-input" />
+                <button id="uploadFileBtn" class="submit-btn">上传文件</button>
+            </div>
+
+            <!-- 功能3: 历史记录 -->
+            <div class="function-card">
+                <h3>📋 历史记录</h3>
+                <button id="refreshHistoryBtn" class="submit-btn">刷新历史</button>
+                <div id="historyContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let isAuthenticated = false;
+
+        // DOM 元素
+        const loginContainer = document.getElementById('loginContainer');
+        const mainContent = document.getElementById('mainContent');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const message = document.getElementById('message');
+        const loading = document.getElementById('loading');
+
+        // 功能按钮
+        const syncTextBtn = document.getElementById('syncTextBtn');
+        const uploadFileBtn = document.getElementById('uploadFileBtn');
+        const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+        const readClipboardBtn = document.getElementById('readClipboardBtn');
+
+        // 输入元素
+        const textInput = document.getElementById('textInput');
+        const fileInput = document.getElementById('fileInput');
+        const historyContainer = document.getElementById('historyContainer');
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+            bindEvents();
+            // 尝试自动读取剪贴板内容（静默模式）
+            autoReadClipboardContent();
+        });
+
+        // 绑定事件
+        function bindEvents() {
+            loginBtn.addEventListener('click', handleLogin);
+            logoutBtn.addEventListener('click', handleLogout);
+            syncTextBtn.addEventListener('click', handleSyncText);
+            uploadFileBtn.addEventListener('click', handleUploadFile);
+            refreshHistoryBtn.addEventListener('click', loadHistory);
+            readClipboardBtn.addEventListener('click', readClipboardContent);
+            
+            // 回车登录
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleLogin();
+                }
+            });
+        }
+
+        // 检查认证状态
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/check-auth');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.authenticated) {
+                        showMainContent();
+                        loadHistory();
+                    }
+                }
+            } catch (error) {
+                console.error('检查认证状态失败:', error);
+            }
+        }
+
+        // 处理登录
+        async function handleLogin() {
+            const password = passwordInput.value.trim();
+            if (!password) {
+                showMessage('请输入密码', 'error');
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showMessage('登录成功！', 'success');
+                    setTimeout(() => {
+                        showMainContent();
+                        loadHistory();
+                        // 登录成功后再次尝试自动读取剪贴板内容
+                        autoReadClipboardContent();
+                    }, 1000);
+                } else {
+                    showMessage(data.message || '登录失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请重试', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 处理登出
+        async function handleLogout() {
+            try {
+                await fetch('/api/logout');
+                showLoginContainer();
+                showMessage('已登出', 'success');
+            } catch (error) {
+                showMessage('登出失败', 'error');
+            }
+        }
+
+        // 处理文本同步
+        async function handleSyncText() {
+            const text = textInput.value.trim();
+            if (!text) {
+                showMessage('请输入文本内容', 'error');
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const response = await fetch('/api/sync-text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showMessage('文本同步成功！', 'success');
+                    textInput.value = '';
+                    loadHistory();
+                } else {
+                    showMessage(data.message || '同步失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请重试', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 处理文件上传
+        async function handleUploadFile() {
+            const file = fileInput.files[0];
+            if (!file) {
+                showMessage('请选择文件', 'error');
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/api/upload-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showMessage('文件上传成功！', 'success');
+                    fileInput.value = '';
+                    loadHistory();
+                } else {
+                    showMessage(data.message || '上传失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请重试', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 加载历史记录
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        renderHistory(data.data);
+                    }
+                }
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+            }
+        }
+
+        // 解析UserAgent获取设备信息
+        function parseUserAgent(userAgent) {
+            if (!userAgent) return { icon: '🌐', name: '未知设备' };
+            
+            const ua = userAgent.toLowerCase();
+            
+            // 操作系统检测
+            if (ua.includes('android')) {
+                return { icon: '🤖', name: 'Android' };
+            } else if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) {
+                return { icon: '🍎', name: 'iOS' };
+            } else if (ua.includes('windows')) {
+                return { icon: '🪟', name: 'Windows' };
+            } else if (ua.includes('mac os') || ua.includes('macintosh')) {
+                return { icon: '🍎', name: 'macOS' };
+            } else if (ua.includes('linux')) {
+                return { icon: '🐧', name: 'Linux' };
+            }
+            
+            // 浏览器检测
+            if (ua.includes('chrome')) {
+                return { icon: '🌐', name: 'Chrome' };
+            } else if (ua.includes('firefox')) {
+                return { icon: '🦊', name: 'Firefox' };
+            } else if (ua.includes('safari')) {
+                return { icon: '🌐', name: 'Safari' };
+            } else if (ua.includes('edge')) {
+                return { icon: '🌐', name: 'Edge' };
+            }
+            
+            return { icon: '🌐', name: '其他' };
+        }
+
+        // 渲染历史记录
+        function renderHistory(items) {
+            if (items.length === 0) {
+                historyContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">暂无历史记录</p>';
+                return;
+            }
+
+            const historyHTML = items.map(item => {
+                const time = new Date(item.timestamp).toLocaleString('zh-CN');
+                const size = formatFileSize(item.size);
+                const deviceInfo = parseUserAgent(item.user_agent);
+                
+                if (item.type === 'text') {
+                    return `
+                        <div class="history-item">
+                            <div class="history-item-header">
+                                <span class="history-item-type">文本</span>
+                                <span class="history-item-time">
+                                    ${time}
+                                    <span class="device-info" title="${deviceInfo.name}">${deviceInfo.icon} ${deviceInfo.name}</span>
+                                </span>
+                            </div>
+                            <div class="history-item-content">${item.content}</div>
+                            <div class="history-item-actions">
+                                <button class="action-btn" onclick="copyText('${item.content.replace(/'/g, "\\'")}', this)">复制文本</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="history-item">
+                            <div class="history-item-header">
+                                <span class="history-item-type">文件</span>
+                                <span class="history-item-time">
+                                    ${time}
+                                    <span class="device-info" title="${deviceInfo.name}">${deviceInfo.icon} ${deviceInfo.name}</span>
+                                </span>
+                            </div>
+                            <div class="history-item-content">
+                                <strong>${item.original_name}</strong><br>
+                                <small>大小: ${size} | 类型: ${item.extension.toUpperCase()}</small>
+                            </div>
+                            <div class="history-item-actions">
+                                <button class="action-btn" onclick="downloadFile('${item.id}')">下载文件</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            historyContainer.innerHTML = historyHTML;
+        }
+
+        // 复制文本
+        function copyText(text, buttonElement) {
+            navigator.clipboard.writeText(text).then(() => {
+                // 显示"已复制"字样
+                const originalText = buttonElement.textContent;
+                buttonElement.textContent = '已复制';
+                buttonElement.style.background = '#28a745';
+                buttonElement.disabled = true;
+                
+                // 2秒后恢复原状
+                setTimeout(() => {
+                    buttonElement.textContent = originalText;
+                    buttonElement.style.background = '#667eea';
+                    buttonElement.disabled = false;
+                }, 2000);
+                
+                showMessage('文本已复制到剪贴板', 'success');
+            }).catch(() => {
+                showMessage('复制失败，请手动复制', 'error');
+            });
+        }
+
+        // 下载文件
+        function downloadFile(fileId) {
+            window.open(`/api/download/${fileId}`, '_blank');
+        }
+
+        // 静默读取剪贴板内容（页面加载时自动执行）
+        async function autoReadClipboardContent() {
+            try {
+                // 检查是否支持剪贴板API
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const clipboardText = await navigator.clipboard.readText();
+                    
+                    // 如果剪贴板有内容且文本输入框为空，则填充内容
+                    if (clipboardText && clipboardText.trim() && !textInput.value.trim()) {
+                        textInput.value = clipboardText.trim();
+                        
+                        // 静默填充，不显示提示信息
+                        console.log('已自动填充剪贴板内容');
+                        
+                        // 自动聚焦到文本输入框
+                        textInput.focus();
+                        
+                        // 将光标移到文本末尾
+                        textInput.setSelectionRange(textInput.value.length, textInput.value.length);
+                    }
+                }
+            } catch (error) {
+                // 静默处理错误，不显示给用户
+                console.log('自动读取剪贴板失败:', error.message);
+            }
+        }
+
+        // 读取剪贴板内容（手动点击按钮时执行）
+        async function readClipboardContent() {
+            try {
+                // 检查是否支持剪贴板API
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const clipboardText = await navigator.clipboard.readText();
+                    
+                    if (clipboardText && clipboardText.trim()) {
+                        // 如果剪贴板有内容，则填充到文本输入框
+                        textInput.value = clipboardText.trim();
+                        
+                        // 显示提示信息
+                        showMessage('已读取剪贴板内容', 'success');
+                        
+                        // 自动聚焦到文本输入框
+                        textInput.focus();
+                        
+                        // 将光标移到文本末尾
+                        textInput.setSelectionRange(textInput.value.length, textInput.value.length);
+                    } else {
+                        // 剪贴板为空
+                        showMessage('剪贴板内容为空', 'error');
+                    }
+                } else {
+                    // 浏览器不支持剪贴板API
+                    showMessage('浏览器不支持剪贴板读取', 'error');
+                }
+            } catch (error) {
+                // 剪贴板访问被拒绝或出现其他错误
+                if (error.name === 'NotAllowedError') {
+                    showMessage('需要剪贴板访问权限，请点击允许', 'error');
+                } else {
+                    showMessage('读取剪贴板失败: ' + error.message, 'error');
+                }
+                console.log('无法读取剪贴板内容:', error.message);
+            }
+        }
+
+        // 显示主内容
+        function showMainContent() {
+            loginContainer.style.display = 'none';
+            mainContent.classList.add('show');
+        }
+
+        // 显示登录界面
+        function showLoginContainer() {
+            mainContent.classList.remove('show');
+            loginContainer.style.display = 'block';
+            passwordInput.value = '';
+        }
+
+        // 显示消息
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = `message ${type}`;
+            message.style.display = 'block';
+            
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 3000);
+        }
+
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            loading.style.display = show ? 'block' : 'none';
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
