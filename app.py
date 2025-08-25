@@ -182,10 +182,6 @@ def upload_file():
 @app.route('/api/shorten-url', methods=['POST'])
 def shorten_url():
     """缩短URL"""
-    auth_cookie = request.cookies.get('sync_auth')
-    if auth_cookie != 'authenticated':
-        return jsonify({'success': False, 'message': '未认证'}), 401
-    
     data = request.get_json()
     long_url = data.get('url', '').strip()
     
