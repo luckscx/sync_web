@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, send_file, make_response
+from flask import Flask, request, jsonify, render_template, send_file, make_response, redirect
 from flask_cors import CORS
 import os
 import json
@@ -35,13 +35,25 @@ def load_data():
     """加载同步数据"""
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {'texts': [], 'files': []}
+            data = json.load(f)
+            # 确保新字段存在
+            if 'urls' not in data:
+                data['urls'] = []
+            if 'url_counter' not in data:
+                data['url_counter'] = 0
+            return data
+    return {'texts': [], 'files': [], 'urls': [], 'url_counter': 0}
 
 def save_data(data):
     """保存同步数据"""
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+def generate_short_code(counter):
+    """生成短链接代码"""
+    # 使用hashlib生成8位短码
+    hash_obj = hashlib.md5(str(counter).encode())
+    return hash_obj.hexdigest()[:8]
 
 def allowed_file(filename):
     """检查文件类型是否允许"""
@@ -167,6 +179,129 @@ def upload_file():
     
     return jsonify({'success': False, 'message': '不支持的文件类型'}), 400
 
+@app.route('/api/shorten-url', methods=['POST'])
+def shorten_url():
+    """缩短URL"""
+    auth_cookie = request.cookies.get('sync_auth')
+    if auth_cookie != 'authenticated':
+        return jsonify({'success': False, 'message': '未认证'}), 401
+    
+    data = request.get_json()
+    long_url = data.get('url', '').strip()
+    
+    if not long_url:
+        return jsonify({'success': False, 'message': 'URL不能为空'}), 400
+    
+    # 简单的URL格式验证
+    if not long_url.startswith(('http://', 'https://')):
+        return jsonify({'success': False, 'message': '请输入有效的HTTP或HTTPS URL'}), 400
+    
+    sync_data = load_data()
+    
+    # 检查URL是否已经存在
+    for url_item in sync_data['urls']:
+        if url_item['long_url'] == long_url:
+            short_code = url_item['short_code']
+            short_url = f"{request.host_url.rstrip('/')}/s/{short_code}"
+            return jsonify({
+                'success': True, 
+                'message': 'URL已存在',
+                'short_url': short_url,
+                'short_code': short_code
+            })
+    
+    # 生成新的短链接
+    sync_data['url_counter'] += 1
+    short_code = generate_short_code(sync_data['url_counter'])
+    
+    # 获取UserAgent信息
+    user_agent = request.headers.get('User-Agent', '')
+    
+    # 添加新URL记录到开头
+    new_url_item = {
+        'id': str(uuid.uuid4()),
+        'long_url': long_url,
+        'short_code': short_code,
+        'type': 'url',
+        'timestamp': datetime.now().isoformat(),
+        'clicks': 0,
+        'user_agent': user_agent
+    }
+    
+    sync_data['urls'].insert(0, new_url_item)
+    
+    # 保持最多20个URL
+    sync_data['urls'] = sync_data['urls'][:20]
+    
+    save_data(sync_data)
+    
+    short_url = f"{request.host_url.rstrip('/')}/s/{short_code}"
+    
+    return jsonify({
+        'success': True, 
+        'message': 'URL缩短成功',
+        'short_url': short_url,
+        'short_code': short_code
+    })
+
+@app.route('/s/<short_code>')
+def redirect_short_url(short_code):
+    """短链接重定向"""
+    sync_data = load_data()
+    
+    # 查找短链接
+    url_item = None
+    for item in sync_data['urls']:
+        if item['short_code'] == short_code:
+            url_item = item
+            break
+    
+    if not url_item:
+        return jsonify({'success': False, 'message': '短链接不存在'}), 404
+    
+    # 增加点击次数
+    url_item['clicks'] += 1
+    save_data(sync_data)
+    
+    # 301重定向到长URL
+    return redirect(url_item['long_url'], code=301)
+
+@app.route('/api/url-history')
+def get_url_history():
+    """获取URL历史记录"""
+    auth_cookie = request.cookies.get('sync_auth')
+    if auth_cookie != 'authenticated':
+        return jsonify({'success': False, 'message': '未认证'}), 401
+    
+    sync_data = load_data()
+    
+    # 返回所有URL记录，按时间排序
+    urls = sorted(sync_data['urls'], key=lambda x: x['timestamp'], reverse=True)
+    
+    # 为每个URL添加完整的短链接
+    for url_item in urls:
+        url_item['short_url'] = f"{request.host_url.rstrip('/')}/s/{url_item['short_code']}"
+    
+    return jsonify({'success': True, 'data': urls})
+
+@app.route('/api/delete-url/<url_id>', methods=['DELETE'])
+def delete_url(url_id):
+    """删除URL"""
+    auth_cookie = request.cookies.get('sync_auth')
+    if auth_cookie != 'authenticated':
+        return jsonify({'success': False, 'message': '未认证'}), 401
+    
+    sync_data = load_data()
+    
+    # 查找并删除URL
+    for i, url_item in enumerate(sync_data['urls']):
+        if url_item['id'] == url_id:
+            del sync_data['urls'][i]
+            save_data(sync_data)
+            return jsonify({'success': True, 'message': 'URL删除成功'})
+    
+    return jsonify({'success': False, 'message': 'URL不存在'}), 404
+
 @app.route('/api/history')
 def get_history():
     """获取历史记录"""
@@ -218,7 +353,7 @@ def clear_history():
     
     try:
         # 清空数据
-        sync_data = {'texts': [], 'files': []}
+        sync_data = {'texts': [], 'files': [], 'urls': [], 'url_counter': 0}
         save_data(sync_data)
         
         # 清空上传的文件
